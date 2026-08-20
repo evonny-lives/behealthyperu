@@ -375,6 +375,8 @@ function renderResumenCards() {
     { label: 'Ventas registradas', value: fmtNum(r.ventas) },
     { label: 'Facturación total', value: fmtMoney(r.ingresos) },
     { label: 'Ticket promedio', value: fmtMoney(r.ticketPromedio) },
+    { label: '% de cierre', value: r.porcentajeCierre != null ? r.porcentajeCierre + '%' : '—', green: true,
+      note: r.porcentajeCierre != null ? 'ventas ÷ mensajes recibidos' : 'necesita mensajes de Meta' },
     { label: 'ROAS global', value: r.roasGlobal != null ? r.roasGlobal + 'x' : '—', green: true,
       note: r.gastoFuente === 'meta' ? 'con gasto real de Meta' : 'con gasto manual (Resumen por Anuncio)' }
   ];
