@@ -175,10 +175,11 @@
         <span class="meta-badge off" id="metaBadge">Sin conectar</span>
       </div>
       <div class="cards" id="metaCards" style="margin-bottom:0;"></div>
+      <p class="sub" id="metaSyncTxt" style="margin:12px 0 0;"></p>
       <div class="meta-setup" id="metaSetupMsg" style="display:none;margin-top:12px;">
-        Aún no está conectado el API de Meta. Configura <code>META_ACCESS_TOKEN</code> y
-        <code>META_AD_ACCOUNTS</code> en las Propiedades del script de Apps Script para ver
-        inversión, mensajes y ROAS en vivo desde las 3 cuentas publicitarias.
+        Aún no hay datos sincronizados desde Meta. Corre <code>sincronizarMetaAds()</code>
+        en el archivo SyncMetaAds.gs y revisa que la pestaña <code>Gasto Auto</code>
+        se haya llenado.
       </div>
     </div>
 
@@ -304,7 +305,7 @@
  * CONFIG — pega aquí la URL de tu Apps Script (termina en /exec)
  * ============================================================ */
 const CONFIG = {
-  API_URL: 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbywhX1iGpO0_reC9YPDX00cmg98ArO2Zc3sYffWCVZGsXodoTy0QWsFq2P1RTqBdTe39w/exec'
 };
 
 let DATA = null;
@@ -391,9 +392,10 @@ function renderMetaPanel() {
   const badge = document.getElementById('metaBadge');
   const setupMsg = document.getElementById('metaSetupMsg');
 
-  badge.textContent = meta.conectado ? 'Conectado' : 'Sin conectar';
+  badge.textContent = meta.conectado ? 'Sincronizado' : 'Sin datos aún';
   badge.className = 'meta-badge ' + (meta.conectado ? 'on' : 'off');
   setupMsg.style.display = meta.conectado ? 'none' : 'block';
+  document.getElementById('metaSyncTxt').textContent = meta.ultimaActualizacion || '';
 
   const cards = [
     { label: 'Inversión total', value: fmtMoney(meta.inversionTotal) },
