@@ -288,6 +288,20 @@
         </table>
       </div>
     </div>
+
+    <div class="panel">
+      <h3>Top 5 anuncios con mayor ROAS</h3>
+      <p class="sub">Los que más retorno dan por cada sol invertido — vale la pena escalarlos</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th></th><th>Código anuncio</th><th>Producto</th><th>Vendedor(es)</th>
+            <th class="num">ROAS</th><th class="num">Gasto</th><th class="num">Ingresos</th>
+          </tr></thead>
+          <tbody id="tblTop5Roas"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <!-- ================= ANUAL ================= -->
@@ -610,6 +624,20 @@ function renderTop5() {
       <td class="num">${fmtMoney(a.ingresos)}</td>
       <td class="num">${a.roas != null ? a.roas + 'x' : '—'}</td>
     </tr>`).join('') || `<tr><td colspan="7" class="empty">No hay ventas registradas aún</td></tr>`;
+
+  const top5Roas = (DATA.porAnuncio || [])
+    .filter(a => a.roas != null && a.gasto > 0)
+    .slice().sort((a, b) => b.roas - a.roas).slice(0, 5);
+  document.getElementById('tblTop5Roas').innerHTML = top5Roas.map((a, i) => `
+    <tr>
+      <td><span class="rank">${i + 1}</span></td>
+      <td>${a.codigo}</td>
+      <td>${a.producto || '—'}</td>
+      <td>${(a.vendedores || []).join(', ') || '—'}</td>
+      <td class="num">${a.roas}x</td>
+      <td class="num">${fmtMoney(a.gasto)}</td>
+      <td class="num">${fmtMoney(a.ingresos)}</td>
+    </tr>`).join('') || `<tr><td colspan="7" class="empty">No hay anuncios con gasto y ventas registradas aún</td></tr>`;
 }
 
 /* ---------- ANUAL ---------- */
