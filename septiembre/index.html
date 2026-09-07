@@ -589,7 +589,14 @@ function renderAnunciosView() {
     (!estado || a.estado === estado) &&
     (!producto || a.producto === producto) &&
     (!vendedor || (a.vendedores || []).includes(vendedor))
-  );
+  ).sort((a, b) => {
+    // Ordena por ROAS de mayor a menor; los que no tienen ROAS (sin gasto
+    // registrado) quedan al final, no arriba como si fueran "0".
+    if (a.roas == null && b.roas == null) return 0;
+    if (a.roas == null) return 1;
+    if (b.roas == null) return -1;
+    return b.roas - a.roas;
+  });
 
   document.getElementById('tblAnuncios').innerHTML = rows.map(a => `
     <tr>
