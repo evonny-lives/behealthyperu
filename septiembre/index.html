@@ -151,7 +151,6 @@
     <button data-view="vendedor">Por vendedor</button>
     <button data-view="anuncios">Anuncios</button>
     <button data-view="top5">Top 5</button>
-    <button data-view="anual">Anual</button>
   </nav>
 
   <!-- ================= DASHBOARD ================= -->
@@ -312,25 +311,6 @@
     </div>
   </section>
 
-  <!-- ================= ANUAL ================= -->
-  <section id="view-anual" class="view">
-    <div class="panel">
-      <h3>Resumen acumulado del año</h3>
-      <p class="sub">Un mes por fila — se va llenando al cierre de cada mes</p>
-      <div class="table-scroll">
-        <table>
-          <thead><tr>
-            <th>Mes</th><th class="num">Facturado</th><th class="num">ROAS</th>
-            <th class="num">% de Cierre</th><th class="num">Inversión</th>
-            <th class="num">Costo/compra</th><th class="num">Ticket prom.</th>
-            <th class="num">Costo/mensaje</th><th>Vendedor del mes</th>
-          </tr></thead>
-          <tbody id="tblAnual"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
 </div>
 
 <script>
@@ -399,7 +379,6 @@ function render() {
   safe(renderVendedorView, 'vendedorView');
   safe(renderAnunciosView, 'anunciosView');
   safe(renderTop5, 'top5');
-  safe(renderAnual, 'anual');
 }
 
 /* ---------- Vendedor del mes ---------- */
@@ -659,23 +638,6 @@ function renderTop5() {
       <td class="num">${fmtMoney(a.ingresos)}</td>
       <td>${renderVerLink(a)}</td>
     </tr>`).join('') || `<tr><td colspan="8" class="empty">No hay anuncios con gasto y ventas registradas aún</td></tr>`;
-}
-
-/* ---------- ANUAL ---------- */
-function renderAnual() {
-  const rows = DATA.resumenAnual || [];
-  document.getElementById('tblAnual').innerHTML = rows.map(m => `
-    <tr>
-      <td>${m.mes}</td>
-      <td class="num">${fmtMoney(m.facturado)}</td>
-      <td class="num">${m.roas != null ? m.roas + 'x' : '—'}</td>
-      <td class="num">${m.porcentajeCierre != null ? m.porcentajeCierre + '%' : '—'}</td>
-      <td class="num">${fmtMoney(m.inversion)}</td>
-      <td class="num">${m.costoPorCompra != null ? fmtMoney(m.costoPorCompra) : '—'}</td>
-      <td class="num">${fmtMoney(m.ticketPromedio)}</td>
-      <td class="num">${m.costoPorMensaje != null ? fmtMoney(m.costoPorMensaje) : '—'}</td>
-      <td>${m.vendedorDelMes || '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="9" class="empty">Aún no hay meses archivados. Se llenan al cierre de cada mes con ResumenAnual.gs</td></tr>`;
 }
 
 /* ---------- eventos ---------- */
