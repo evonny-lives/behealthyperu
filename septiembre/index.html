@@ -103,6 +103,14 @@
   .filters select{background:var(--bg-panel-2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;}
 
   .table-scroll{overflow-x:auto;}
+  /* Congela la primera columna (Código anuncio) al deslizar la tabla
+     horizontalmente, para siempre saber de qué anuncio son los datos. */
+  table .sticky-col{
+    position:sticky;left:0;z-index:2;background:var(--bg-panel);
+    box-shadow:2px 0 4px rgba(44,32,19,.08);
+  }
+  thead .sticky-col{z-index:3;}
+  tbody tr:hover .sticky-col{background:var(--bg-panel-2);}
   table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
   thead th{text-align:left;color:var(--ink-dim);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg-panel);}
   tbody td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--ink);}
@@ -260,15 +268,15 @@
       <h3>Rendimiento por anuncio</h3>
       <div class="table-scroll">
         <table>
-          <thead><tr>
-            <th>Código anuncio</th><th>Producto</th><th>Formato</th><th>Vendedor</th>
-            <th class="num">Ventas</th><th class="num">Ingresos</th><th class="num">Gasto</th>
-            <th class="num">ROAS</th><th class="num">Costo/compra</th><th class="num">Mensajes</th>
-            <th class="num">Costo/mensaje</th><th class="num">Ticket</th><th>Última venta</th>
-            <th>Estado</th><th>Ver</th>
-          </tr></thead>
-          <tbody id="tblAnuncios"></tbody>
-        </table>
+      <thead><tr>
+        <th class="sticky-col">Código anuncio</th><th>Producto</th><th>Formato</th><th>Vendedor</th>
+        <th class="num">Ventas</th><th class="num">Ingresos</th><th class="num">Gasto</th>
+        <th class="num">ROAS</th><th class="num">Costo/compra</th><th class="num">Mensajes</th>
+        <th class="num">Costo/mensaje</th><th class="num">Ticket</th><th>Última venta</th>
+        <th>Estado</th><th>Ver</th>
+      </tr></thead>
+      <tbody id="tblAnuncios"></tbody>
+    </table>
       </div>
     </div>
   </section>
@@ -282,7 +290,7 @@
         <table>
           <thead><tr>
             <th></th><th>Código anuncio</th><th>Producto</th><th>Vendedor(es)</th>
-            <th class="num">Ventas</th><th class="num">Ingresos</th><th class="num">ROAS</th>
+            <th class="num">Ventas</th><th class="num">Ingresos</th><th class="num">ROAS</th><th>Ver</th>
           </tr></thead>
           <tbody id="tblTop5"></tbody>
         </table>
@@ -296,7 +304,7 @@
         <table>
           <thead><tr>
             <th></th><th>Código anuncio</th><th>Producto</th><th>Vendedor(es)</th>
-            <th class="num">ROAS</th><th class="num">Gasto</th><th class="num">Ingresos</th>
+            <th class="num">ROAS</th><th class="num">Gasto</th><th class="num">Ingresos</th><th>Ver</th>
           </tr></thead>
           <tbody id="tblTop5Roas"></tbody>
         </table>
@@ -600,7 +608,7 @@ function renderAnunciosView() {
 
   document.getElementById('tblAnuncios').innerHTML = rows.map(a => `
     <tr>
-      <td>${a.codigo}${a.fuenteGasto === 'meta' ? ' <span class="pill on" style="margin-left:4px;">Meta</span>' : (a.fuenteGasto === 'manual' ? ' <span class="pill off" style="margin-left:4px;">Manual</span>' : '')}</td>
+      <td class="sticky-col">${a.codigo}${a.fuenteGasto === 'meta' ? ' <span class="pill on" style="margin-left:4px;">Meta</span>' : (a.fuenteGasto === 'manual' ? ' <span class="pill off" style="margin-left:4px;">Manual</span>' : '')}</td>
       <td>${a.producto || '—'}</td>
       <td>${a.formato || '—'}</td>
       <td>${(a.vendedores || []).join(', ') || '—'}</td>
@@ -619,6 +627,10 @@ function renderAnunciosView() {
 }
 
 /* ---------- TOP 5 (global, con ROAS) ---------- */
+function renderVerLink(a) {
+  return a.link ? `<a class="ver" href="${a.link}" target="_blank" rel="noopener">Ver ↗</a>` : '—';
+}
+
 function renderTop5() {
   const top5 = (DATA.porAnuncio || []).slice().sort((a, b) => b.ingresos - a.ingresos).slice(0, 5);
   document.getElementById('tblTop5').innerHTML = top5.map((a, i) => `
@@ -630,7 +642,8 @@ function renderTop5() {
       <td class="num">${fmtNum(a.ventas)}</td>
       <td class="num">${fmtMoney(a.ingresos)}</td>
       <td class="num">${a.roas != null ? a.roas + 'x' : '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="7" class="empty">No hay ventas registradas aún</td></tr>`;
+      <td>${renderVerLink(a)}</td>
+    </tr>`).join('') || `<tr><td colspan="8" class="empty">No hay ventas registradas aún</td></tr>`;
 
   const top5Roas = (DATA.porAnuncio || [])
     .filter(a => a.roas != null && a.gasto > 0)
@@ -644,7 +657,8 @@ function renderTop5() {
       <td class="num">${a.roas}x</td>
       <td class="num">${fmtMoney(a.gasto)}</td>
       <td class="num">${fmtMoney(a.ingresos)}</td>
-    </tr>`).join('') || `<tr><td colspan="7" class="empty">No hay anuncios con gasto y ventas registradas aún</td></tr>`;
+      <td>${renderVerLink(a)}</td>
+    </tr>`).join('') || `<tr><td colspan="8" class="empty">No hay anuncios con gasto y ventas registradas aún</td></tr>`;
 }
 
 /* ---------- ANUAL ---------- */
