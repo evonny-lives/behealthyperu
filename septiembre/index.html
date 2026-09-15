@@ -103,6 +103,11 @@
   .filters select{background:var(--bg-panel-2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;}
 
   .table-scroll{overflow-x:auto;overflow-y:visible;}
+  /* Caja con altura fija y su propio scroll vertical interno — dentro de
+     esta caja el encabezado sí puede quedarse pegado arriba mientras
+     bajas, porque el navegador reconoce esta caja como el contenedor
+     que realmente se desplaza. */
+  .table-scroll.tabla-alta{max-height:560px;overflow-y:auto;}
   /* Congela la primera columna (Código anuncio) al deslizar la tabla
      horizontalmente, para siempre saber de qué anuncio son los datos. */
   table .sticky-col{
@@ -265,7 +270,7 @@
 
     <div class="panel">
       <h3>Rendimiento por anuncio</h3>
-      <div class="table-scroll">
+      <div class="table-scroll tabla-alta">
         <table>
       <thead><tr>
         <th class="sticky-col">Código anuncio</th><th>Producto</th><th>Formato</th><th>Vendedor</th>
