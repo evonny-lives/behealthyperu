@@ -270,15 +270,30 @@
 
   <!-- ================= ANUNCIOS ================= -->
   <section id="view-anuncios" class="view">
-    <div class="filters">
-      <select id="filtroEstadoAd">
-        <option value="">Estado: Todos</option>
-        <option value="encendido">✅ Prendidos</option>
-        <option value="apagado">⏸ Apagados</option>
-        <option value="prendido_sin_ventas">🚨 Prendidos sin ventas</option>
-      </select>
+    <div class="filters" style="align-items:center;">
+      <span style="font-size:13px;color:var(--ink-dim);">Estado:</span>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;">
+        <input type="checkbox" class="filtroEstadoChk" value="encendido" checked> ✅ Prendidos
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;">
+        <input type="checkbox" class="filtroEstadoChk" value="apagado" checked> ⏸ Apagados
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;">
+        <input type="checkbox" class="filtroEstadoChk" value="prendido_sin_ventas" checked> 🚨 Prendidos sin ventas
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;">
+        <input type="checkbox" class="filtroEstadoChk" value="sin_dato" checked> Sin dato
+      </label>
       <select id="filtroProductoAd"><option value="">Producto: Todos</option></select>
       <select id="filtroVendedorAd"><option value="">Vendedor: Todos</option></select>
+      <select id="filtroCanalAd">
+        <option value="">Canal: Todos</option>
+        <option value="1">V1 / VENTAS1</option>
+        <option value="2">V2 / VENTAS2</option>
+        <option value="3">V3 / VENTAS3</option>
+        <option value="4">V4 / VENTAS4</option>
+        <option value="5">V5 / VENTAS5</option>
+      </select>
     </div>
 
     <div class="panel">
@@ -715,15 +730,23 @@ function estadoPill(estado) {
   return '<span class="pill off">Sin dato</span>';
 }
 
+function coincideCanal(codigo, canal) {
+  if (!canal) return true;
+  const c = String(codigo || '').toUpperCase();
+  return c.includes('V' + canal) || c.includes('VENTAS' + canal) || c.includes('VENTAS ' + canal);
+}
+
 function renderAnunciosView() {
-  const estado = document.getElementById('filtroEstadoAd').value;
+  const estadosSeleccionados = Array.from(document.querySelectorAll('.filtroEstadoChk:checked')).map(c => c.value);
   const producto = document.getElementById('filtroProductoAd').value;
   const vendedor = document.getElementById('filtroVendedorAd').value;
+  const canal = document.getElementById('filtroCanalAd').value;
 
   const rows = (DATA.porAnuncio || []).filter(a =>
-    (!estado || a.estado === estado) &&
+    estadosSeleccionados.includes(a.estado) &&
     (!producto || a.producto === producto) &&
-    (!vendedor || (a.vendedores || []).includes(vendedor))
+    (!vendedor || (a.vendedores || []).includes(vendedor)) &&
+    coincideCanal(a.codigo, canal)
   ).sort((a, b) => {
     // Ordena por ROAS de mayor a menor; los que no tienen ROAS (sin gasto
     // registrado) quedan al final, no arriba como si fueran "0".
@@ -799,7 +822,8 @@ document.querySelectorAll('nav.tabs button').forEach(btn => {
 });
 
 ['filtroVendedor', 'filtroProducto'].forEach(id => document.getElementById(id).addEventListener('change', renderVendedorView));
-['filtroEstadoAd', 'filtroProductoAd', 'filtroVendedorAd'].forEach(id => document.getElementById(id).addEventListener('change', renderAnunciosView));
+document.querySelectorAll('.filtroEstadoChk').forEach(chk => chk.addEventListener('change', renderAnunciosView));
+['filtroProductoAd', 'filtroVendedorAd', 'filtroCanalAd'].forEach(id => document.getElementById(id).addEventListener('change', renderAnunciosView));
 
 document.getElementById('btnRefresh').addEventListener('click', loadData);
 
