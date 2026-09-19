@@ -170,7 +170,7 @@
           Hasta <input type="date" id="filtroFechaHasta" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;background:var(--bg-panel-2);color:var(--ink);">
         </label>
         <button class="refresh" id="btnFiltroFechaReset">↺ Todo el período</button>
-        <span class="sub" style="margin:0;">Ventas, gráficos y vendedor del período se ajustan al rango. El panel de Meta Ads sigue mostrando el período completo (aún no está desglosado por día).</span>
+        <span class="sub" style="margin:0;">Ventas, gasto de Meta, ROAS, % de cierre, gráficos y vendedor del período se ajustan al rango elegido.</span>
       </div>
     </div>
 
@@ -462,12 +462,33 @@ function computeVista(desde, hasta) {
   const totalVentas = ventas.length;
   const totalIngresos = ventas.reduce((s, v) => s + v.monto, 0);
   const porVendedor = calcularPorVendedorDesdeVentas(ventas);
+
+  // Gasto de Meta dentro del mismo rango de fecha elegido, sumando los días
+  // que caigan dentro de [desde, hasta].
+  const diasMeta = (DATA.metaDiario || []).filter(d => {
+    const f = parseFechaClienteDMY(d.fecha);
+    return f && f >= desde && f <= hasta;
+  });
+  const inversion = diasMeta.reduce((s, d) => s + d.gasto, 0);
+  const mensajes = diasMeta.reduce((s, d) => s + d.mensajes, 0);
+  const costoPorMensaje = mensajes > 0 ? inversion / mensajes : null;
+  const roas = inversion > 0 ? totalIngresos / inversion : null;
+  const porcentajeCierre = mensajes > 0 ? (totalVentas / mensajes) * 100 : null;
+
   return {
     ventas: ventas,
     resumen: {
       ventas: totalVentas,
       ingresos: totalIngresos,
-      ticketPromedio: totalVentas > 0 ? totalIngresos / totalVentas : 0
+      ticketPromedio: totalVentas > 0 ? totalIngresos / totalVentas : 0,
+      roas: roas,
+      porcentajeCierre: porcentajeCierre
+    },
+    meta: {
+      conectado: diasMeta.length > 0,
+      inversionTotal: inversion,
+      mensajesTotal: mensajes,
+      costoPorMensaje: costoPorMensaje
     },
     porVendedor: porVendedor,
     serieDiaria: calcularSerieDiariaDesdeVentas(ventas),
@@ -484,6 +505,7 @@ function aplicarFiltroFecha() {
 
   safe(renderVendedorDelMes, 'vendedorDelMes');
   safe(renderResumenCards, 'resumenCards');
+  safe(renderMetaPanel, 'metaPanel');
   safe(renderChartFacturacionVendedor, 'chartFacturacion');
   safe(renderChartVentasVendedor, 'chartVentas');
   safe(renderChartDiario, 'chartDiario');
@@ -518,16 +540,15 @@ function renderVendedorDelMes() {
 
 /* ---------- DASHBOARD ---------- */
 function renderResumenCards() {
-  const rFecha = (VISTA && VISTA.resumen) || { ventas: 0, ingresos: 0, ticketPromedio: 0 };
-  const rMeta = DATA.resumenPeriodo || {};
+  const rFecha = (VISTA && VISTA.resumen) || { ventas: 0, ingresos: 0, ticketPromedio: 0, roas: null, porcentajeCierre: null };
   const cards = [
     { label: 'Ventas registradas', value: fmtNum(rFecha.ventas) },
     { label: 'Facturación total', value: fmtMoney(rFecha.ingresos) },
     { label: 'Ticket promedio', value: fmtMoney(rFecha.ticketPromedio) },
-    { label: '% de cierre', value: rMeta.porcentajeCierre != null ? rMeta.porcentajeCierre + '%' : '—', green: true,
-      note: 'período completo (Meta)' },
-    { label: 'ROAS global', value: rMeta.roasGlobal != null ? rMeta.roasGlobal + 'x' : '—', green: true,
-      note: rMeta.gastoFuente === 'meta' ? 'período completo, gasto real de Meta' : 'período completo, gasto manual' }
+    { label: '% de cierre', value: rFecha.porcentajeCierre != null ? rFecha.porcentajeCierre.toFixed(1) + '%' : '—', green: true,
+      note: 'del rango elegido' },
+    { label: 'ROAS', value: rFecha.roas != null ? rFecha.roas.toFixed(2) + 'x' : '—', green: true,
+      note: 'del rango elegido' }
   ];
   document.getElementById('resumenCards').innerHTML = cards.map(c =>
     `<div class="card"><div class="label">${c.label}</div><div class="value ${c.green ? 'green' : ''}">${c.value}</div>${c.note ? `<div class="note">${c.note}</div>` : ''}</div>`
@@ -535,20 +556,21 @@ function renderResumenCards() {
 }
 
 function renderMetaPanel() {
-  const meta = DATA.meta || { conectado: false };
+  const meta = (VISTA && VISTA.meta) || DATA.meta || { conectado: false };
+  const roasRango = VISTA && VISTA.resumen ? VISTA.resumen.roas : null;
   const badge = document.getElementById('metaBadge');
   const setupMsg = document.getElementById('metaSetupMsg');
 
-  badge.textContent = meta.conectado ? 'Sincronizado' : 'Sin datos aún';
+  badge.textContent = meta.conectado ? 'Sincronizado' : 'Sin datos en este rango';
   badge.className = 'meta-badge ' + (meta.conectado ? 'on' : 'off');
-  setupMsg.style.display = meta.conectado ? 'none' : 'block';
-  document.getElementById('metaSyncTxt').textContent = meta.ultimaActualizacion || '';
+  setupMsg.style.display = (DATA.meta && DATA.meta.conectado) ? 'none' : 'block';
+  document.getElementById('metaSyncTxt').textContent = (DATA.meta && DATA.meta.ultimaActualizacion) || '';
 
   const cards = [
-    { label: 'Inversión total', value: fmtMoney(meta.inversionTotal) },
-    { label: 'Mensajes totales', value: fmtNum(meta.mensajesTotal) },
+    { label: 'Inversión (rango elegido)', value: fmtMoney(meta.inversionTotal) },
+    { label: 'Mensajes (rango elegido)', value: fmtNum(meta.mensajesTotal) },
     { label: 'Costo por mensaje', value: meta.costoPorMensaje != null ? fmtMoney(meta.costoPorMensaje) : '—' },
-    { label: 'ROAS total (Meta)', value: (DATA.resumenPeriodo && DATA.resumenPeriodo.roasGlobal != null && meta.conectado) ? DATA.resumenPeriodo.roasGlobal + 'x' : '—', green: true }
+    { label: 'ROAS (rango elegido)', value: roasRango != null ? roasRango.toFixed(2) + 'x' : '—', green: true }
   ];
   document.getElementById('metaCards').innerHTML = cards.map(c =>
     `<div class="card"><div class="label">${c.label}</div><div class="value ${c.green ? 'green' : ''}">${c.value}</div></div>`
