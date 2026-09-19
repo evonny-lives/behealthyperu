@@ -281,10 +281,6 @@
       <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;">
         <input type="checkbox" class="filtroEstadoChk" value="prendido_sin_ventas" checked> 🚨 Prendidos sin ventas
       </label>
-      <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;">
-        <input type="checkbox" class="filtroEstadoChk" value="sin_dato" checked> Sin dato
-      </label>
-      <select id="filtroProductoAd"><option value="">Producto: Todos</option></select>
       <select id="filtroVendedorAd"><option value="">Vendedor: Todos</option></select>
       <select id="filtroCanalAd">
         <option value="">Canal: Todos</option>
@@ -672,7 +668,6 @@ function populateFilters() {
   fillSelect('filtroVendedor', vendedores, 'Vendedor: Todos');
   fillSelect('filtroProducto', productos, 'Producto: Todos');
   fillSelect('filtroVendedorAd', vendedores, 'Vendedor: Todos');
-  fillSelect('filtroProductoAd', productos, 'Producto: Todos');
 }
 
 function fillSelect(id, values, placeholder) {
@@ -738,13 +733,11 @@ function coincideCanal(codigo, canal) {
 
 function renderAnunciosView() {
   const estadosSeleccionados = Array.from(document.querySelectorAll('.filtroEstadoChk:checked')).map(c => c.value);
-  const producto = document.getElementById('filtroProductoAd').value;
   const vendedor = document.getElementById('filtroVendedorAd').value;
   const canal = document.getElementById('filtroCanalAd').value;
 
   const rows = (DATA.porAnuncio || []).filter(a =>
-    estadosSeleccionados.includes(a.estado) &&
-    (!producto || a.producto === producto) &&
+    (estadosSeleccionados.includes(a.estado) || a.estado === 'sin_dato') &&
     (!vendedor || (a.vendedores || []).includes(vendedor)) &&
     coincideCanal(a.codigo, canal)
   ).sort((a, b) => {
@@ -823,7 +816,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn => {
 
 ['filtroVendedor', 'filtroProducto'].forEach(id => document.getElementById(id).addEventListener('change', renderVendedorView));
 document.querySelectorAll('.filtroEstadoChk').forEach(chk => chk.addEventListener('change', renderAnunciosView));
-['filtroProductoAd', 'filtroVendedorAd', 'filtroCanalAd'].forEach(id => document.getElementById(id).addEventListener('change', renderAnunciosView));
+['filtroVendedorAd', 'filtroCanalAd'].forEach(id => document.getElementById(id).addEventListener('change', renderAnunciosView));
 
 document.getElementById('btnRefresh').addEventListener('click', loadData);
 
