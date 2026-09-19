@@ -161,6 +161,19 @@
   <!-- ================= DASHBOARD ================= -->
   <section id="view-dashboard" class="view active">
 
+    <div class="panel" style="margin-bottom:22px;">
+      <div class="filters" style="margin-bottom:0;align-items:center;">
+        <label style="font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;">
+          Desde <input type="date" id="filtroFechaDesde" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;background:var(--bg-panel-2);color:var(--ink);">
+        </label>
+        <label style="font-size:13px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;">
+          Hasta <input type="date" id="filtroFechaHasta" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;background:var(--bg-panel-2);color:var(--ink);">
+        </label>
+        <button class="refresh" id="btnFiltroFechaReset">↺ Todo el período</button>
+        <span class="sub" style="margin:0;">Ventas, gráficos y vendedor del período se ajustan al rango. El panel de Meta Ads sigue mostrando el período completo (aún no está desglosado por día).</span>
+      </div>
+    </div>
+
     <div class="banner-top" id="vendedorDelMes" style="display:none;">
       <div class="medal">🏆</div>
       <div class="txt">
@@ -333,6 +346,7 @@ const CONFIG = {
 
 let DATA = null;
 let charts = {};
+let VISTA = null; // ventas/gráficos ya filtrados por el rango de fecha del Dashboard
 
 function loadData() {
   setStatus(false, 'Conectando con Google Sheets…');
@@ -375,42 +389,145 @@ function render() {
   const hoyTxt = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
   document.getElementById('periodoTxt').textContent = 'Dashboard Live · ' + CONFIG.PERIODO_INICIO + ' – ' + hoyTxt;
 
+  safe(renderMetaPanel, 'metaPanel');
+  safe(populateFilters, 'populateFilters');
+  safe(renderVendedorView, 'vendedorView');
+  safe(renderAnunciosView, 'anunciosView');
+  safe(renderTop5, 'top5');
+
+  // Las partes del Dashboard que dependen del rango de fecha (ventas,
+  // vendedor del período, gráficos, tabla) se inicializan/actualizan aquí:
+  if (!VISTA) {
+    initFiltroFecha(); // primera carga: pone las fechas por defecto y dibuja
+  } else {
+    aplicarFiltroFecha(); // recargas siguientes: respeta el rango que el usuario ya eligió
+  }
+}
+
+/* ---------- Filtro de fecha del Dashboard ---------- */
+function parseFechaClienteDMY(str) {
+  const parts = String(str || '').split('/');
+  if (parts.length !== 3) return null;
+  const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  return isNaN(d.getTime()) ? null : d;
+}
+function formatFechaClienteOut(d) {
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+}
+function dmyToISO(dmy) {
+  const [d, m, y] = dmy.split('/');
+  return y + '-' + m.padStart(2, '0') + '-' + d.padStart(2, '0');
+}
+function hoyISO() {
+  const t = new Date();
+  return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+}
+
+function calcularPorVendedorDesdeVentas(ventas) {
+  const map = {};
+  ventas.forEach(v => {
+    if (!v.vendedor) return;
+    if (!map[v.vendedor]) map[v.vendedor] = { vendedor: v.vendedor, ventas: 0, ingresos: 0, ultimaVenta: null };
+    const a = map[v.vendedor];
+    a.ventas += 1;
+    a.ingresos += v.monto;
+    const f = parseFechaClienteDMY(v.fecha);
+    if (f && (!a.ultimaVenta || f > a.ultimaVenta)) a.ultimaVenta = f;
+  });
+  return Object.values(map).map(a => ({
+    vendedor: a.vendedor,
+    ventas: a.ventas,
+    ingresos: a.ingresos,
+    ticketPromedio: a.ventas > 0 ? a.ingresos / a.ventas : 0,
+    ultimaVenta: a.ultimaVenta ? formatFechaClienteOut(a.ultimaVenta) : ''
+  })).sort((a, b) => b.ingresos - a.ingresos);
+}
+
+function calcularSerieDiariaDesdeVentas(ventas) {
+  const map = {};
+  ventas.forEach(v => { map[v.fecha] = (map[v.fecha] || 0) + v.monto; });
+  const fechas = Object.keys(map).sort((a, b) => parseFechaClienteDMY(a) - parseFechaClienteDMY(b));
+  let acumulado = 0;
+  return fechas.map(f => {
+    acumulado += map[f];
+    return { fecha: f, ingresosDia: map[f], ingresosAcumulado: acumulado };
+  });
+}
+
+function computeVista(desde, hasta) {
+  const ventas = (DATA.ventasRegistradas || []).filter(v => {
+    const f = parseFechaClienteDMY(v.fecha);
+    return f && f >= desde && f <= hasta;
+  });
+  const totalVentas = ventas.length;
+  const totalIngresos = ventas.reduce((s, v) => s + v.monto, 0);
+  const porVendedor = calcularPorVendedorDesdeVentas(ventas);
+  return {
+    ventas: ventas,
+    resumen: {
+      ventas: totalVentas,
+      ingresos: totalIngresos,
+      ticketPromedio: totalVentas > 0 ? totalIngresos / totalVentas : 0
+    },
+    porVendedor: porVendedor,
+    serieDiaria: calcularSerieDiariaDesdeVentas(ventas),
+    vendedorTop: porVendedor.length ? { vendedor: porVendedor[0].vendedor, ingresos: porVendedor[0].ingresos } : null
+  };
+}
+
+function aplicarFiltroFecha() {
+  const inputDesde = document.getElementById('filtroFechaDesde');
+  const inputHasta = document.getElementById('filtroFechaHasta');
+  const desde = new Date(inputDesde.value + 'T00:00:00');
+  const hasta = new Date(inputHasta.value + 'T23:59:59');
+  VISTA = computeVista(desde, hasta);
+
   safe(renderVendedorDelMes, 'vendedorDelMes');
   safe(renderResumenCards, 'resumenCards');
-  safe(renderMetaPanel, 'metaPanel');
   safe(renderChartFacturacionVendedor, 'chartFacturacion');
   safe(renderChartVentasVendedor, 'chartVentas');
   safe(renderChartDiario, 'chartDiario');
   safe(renderChartAcumulado, 'chartAcumulado');
   safe(renderTablaDetalleVendedor, 'tablaDetalleVendedor');
+}
 
-  safe(populateFilters, 'populateFilters');
-  safe(renderVendedorView, 'vendedorView');
-  safe(renderAnunciosView, 'anunciosView');
-  safe(renderTop5, 'top5');
+function initFiltroFecha() {
+  const inputDesde = document.getElementById('filtroFechaDesde');
+  const inputHasta = document.getElementById('filtroFechaHasta');
+  inputDesde.value = dmyToISO(CONFIG.PERIODO_INICIO);
+  inputHasta.value = hoyISO();
+  inputDesde.addEventListener('change', aplicarFiltroFecha);
+  inputHasta.addEventListener('change', aplicarFiltroFecha);
+  document.getElementById('btnFiltroFechaReset').addEventListener('click', () => {
+    inputDesde.value = dmyToISO(CONFIG.PERIODO_INICIO);
+    inputHasta.value = hoyISO();
+    aplicarFiltroFecha();
+  });
+  aplicarFiltroFecha();
 }
 
 /* ---------- Vendedor del mes ---------- */
 function renderVendedorDelMes() {
-  const top = DATA.resumenPeriodo && DATA.resumenPeriodo.vendedorTop;
+  const top = VISTA && VISTA.vendedorTop;
   const el = document.getElementById('vendedorDelMes');
   if (!top) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
   document.getElementById('vendedorDelMesNombre').textContent = top.vendedor;
-  document.getElementById('vendedorDelMesMonto').textContent = 'Mayor facturación del período: ' + fmtMoney(top.ingresos);
+  document.getElementById('vendedorDelMesMonto').textContent = 'Mayor facturación del rango elegido: ' + fmtMoney(top.ingresos);
 }
 
 /* ---------- DASHBOARD ---------- */
 function renderResumenCards() {
-  const r = DATA.resumenPeriodo || {};
+  const rFecha = (VISTA && VISTA.resumen) || { ventas: 0, ingresos: 0, ticketPromedio: 0 };
+  const rMeta = DATA.resumenPeriodo || {};
   const cards = [
-    { label: 'Ventas registradas', value: fmtNum(r.ventas) },
-    { label: 'Facturación total', value: fmtMoney(r.ingresos) },
-    { label: 'Ticket promedio', value: fmtMoney(r.ticketPromedio) },
-    { label: '% de cierre', value: r.porcentajeCierre != null ? r.porcentajeCierre + '%' : '—', green: true,
-      note: r.porcentajeCierre != null ? 'ventas ÷ mensajes recibidos' : 'necesita mensajes de Meta' },
-    { label: 'ROAS global', value: r.roasGlobal != null ? r.roasGlobal + 'x' : '—', green: true,
-      note: r.gastoFuente === 'meta' ? 'con gasto real de Meta' : 'con gasto manual (Resumen por Anuncio)' }
+    { label: 'Ventas registradas', value: fmtNum(rFecha.ventas) },
+    { label: 'Facturación total', value: fmtMoney(rFecha.ingresos) },
+    { label: 'Ticket promedio', value: fmtMoney(rFecha.ticketPromedio) },
+    { label: '% de cierre', value: rMeta.porcentajeCierre != null ? rMeta.porcentajeCierre + '%' : '—', green: true,
+      note: 'período completo (Meta)' },
+    { label: 'ROAS global', value: rMeta.roasGlobal != null ? rMeta.roasGlobal + 'x' : '—', green: true,
+      note: rMeta.gastoFuente === 'meta' ? 'período completo, gasto real de Meta' : 'período completo, gasto manual' }
   ];
   document.getElementById('resumenCards').innerHTML = cards.map(c =>
     `<div class="card"><div class="label">${c.label}</div><div class="value ${c.green ? 'green' : ''}">${c.value}</div>${c.note ? `<div class="note">${c.note}</div>` : ''}</div>`
@@ -461,7 +578,7 @@ function baseChartOptions(indexAxis) {
 
 function renderChartFacturacionVendedor() {
   destroyChart('facturacion');
-  const rows = (DATA.porVendedor || []).slice(0, 10);
+  const rows = ((VISTA && VISTA.porVendedor) || []).slice(0, 10);
   charts.facturacion = new Chart(document.getElementById('chartFacturacion'), {
     type: 'bar',
     data: { labels: rows.map(r => r.vendedor), datasets: [{ label: 'Facturación (S/)', data: rows.map(r => r.ingresos), backgroundColor: '#8a4a20', borderRadius: 6 }] },
@@ -471,7 +588,7 @@ function renderChartFacturacionVendedor() {
 
 function renderChartVentasVendedor() {
   destroyChart('ventas');
-  const rows = (DATA.porVendedor || []).slice(0, 10);
+  const rows = ((VISTA && VISTA.porVendedor) || []).slice(0, 10);
   charts.ventas = new Chart(document.getElementById('chartVentas'), {
     type: 'bar',
     data: { labels: rows.map(r => r.vendedor), datasets: [{ label: 'Ventas (unid.)', data: rows.map(r => r.ventas), backgroundColor: '#5f7a3f', borderRadius: 6 }] },
@@ -481,7 +598,7 @@ function renderChartVentasVendedor() {
 
 function renderChartDiario() {
   destroyChart('diario');
-  const rows = DATA.serieDiaria || [];
+  const rows = (VISTA && VISTA.serieDiaria) || [];
   charts.diario = new Chart(document.getElementById('chartDiario'), {
     type: 'bar',
     data: { labels: rows.map(r => r.fecha), datasets: [{ label: 'Facturación del día (S/)', data: rows.map(r => r.ingresosDia), backgroundColor: '#c98a4b', borderRadius: 4 }] },
@@ -491,7 +608,7 @@ function renderChartDiario() {
 
 function renderChartAcumulado() {
   destroyChart('acumulado');
-  const rows = DATA.serieDiaria || [];
+  const rows = (VISTA && VISTA.serieDiaria) || [];
   charts.acumulado = new Chart(document.getElementById('chartAcumulado'), {
     type: 'line',
     data: { labels: rows.map(r => r.fecha), datasets: [{ label: 'Facturación acumulada (S/)', data: rows.map(r => r.ingresosAcumulado), borderColor: '#5f7a3f', backgroundColor: 'rgba(95,122,63,.12)', fill: true, tension: .3, pointRadius: 0 }] },
@@ -500,7 +617,7 @@ function renderChartAcumulado() {
 }
 
 function renderTablaDetalleVendedor() {
-  const rows = DATA.porVendedor || [];
+  const rows = (VISTA && VISTA.porVendedor) || [];
   document.getElementById('tblDetalleVendedor').innerHTML = rows.map(r => `
     <tr>
       <td>${r.vendedor}</td>
@@ -508,7 +625,7 @@ function renderTablaDetalleVendedor() {
       <td class="num">${fmtMoney(r.ingresos)}</td>
       <td class="num">${fmtMoney(r.ticketPromedio)}</td>
       <td>${r.ultimaVenta || '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="5" class="empty">Sin datos aún</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="5" class="empty">Sin ventas en este rango</td></tr>`;
 }
 
 /* ---------- FILTROS ---------- */
