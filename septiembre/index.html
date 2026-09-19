@@ -323,7 +323,12 @@
  * CONFIG — URL de tu Apps Script
  * ============================================================ */
 const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbz5Hsw9cBZw8K5XBEM81FPzh87jJwnD8IBPtLNWkC5wRiJn9IQqH6CeCYGkqcVcSwHw/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbz5Hsw9cBZw8K5XBEM81FPzh87jJwnD8IBPtLNWkC5wRiJn9IQqH6CeCYGkqcVcSwHw/exec',
+  // Inicio fijo del mes que cubre este dashboard. Se muestra en el header
+  // junto a la fecha de HOY (la del calendario de quien lo abre) — así el
+  // rango no depende de las fechas escritas en Ventas (Registro), que a
+  // veces tienen años mal tipeados.
+  PERIODO_INICIO: '01/09/2026'
 };
 
 let DATA = null;
@@ -366,10 +371,9 @@ function safe(fn, label) {
 function render() {
   if (!DATA) return;
   document.getElementById('negocioNombre').textContent = DATA.negocio || 'BE-HEALTHY PERU';
-  if (DATA.serieDiaria && DATA.serieDiaria.length) {
-    const first = DATA.serieDiaria[0].fecha, last = DATA.serieDiaria[DATA.serieDiaria.length - 1].fecha;
-    document.getElementById('periodoTxt').textContent = 'Dashboard Live · ' + first + ' – ' + last;
-  }
+  const hoy = new Date();
+  const hoyTxt = String(hoy.getDate()).padStart(2, '0') + '/' + String(hoy.getMonth() + 1).padStart(2, '0') + '/' + hoy.getFullYear();
+  document.getElementById('periodoTxt').textContent = 'Dashboard Live · ' + CONFIG.PERIODO_INICIO + ' – ' + hoyTxt;
 
   safe(renderVendedorDelMes, 'vendedorDelMes');
   safe(renderResumenCards, 'resumenCards');
