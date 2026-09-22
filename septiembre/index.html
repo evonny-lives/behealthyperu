@@ -357,7 +357,7 @@
         <table>
           <thead><tr>
             <th>Campaña</th><th>Conjunto de anuncios</th><th>Canal(es)</th>
-            <th>Tipo</th><th class="num">Presupuesto</th><th>Período</th><th>Mezclado</th>
+            <th>Tipo</th><th class="num">Presupuesto</th><th>Período</th><th>Activo</th><th>Mezclado</th>
           </tr></thead>
           <tbody id="tblPresupuesto"></tbody>
         </table>
@@ -840,7 +840,7 @@ function renderPresupuesto() {
     return `<div class="card"><div class="label">Canal V${c}</div><div class="value">${fmtMoney(monto)}</div><div class="note">por día</div></div>`;
   });
   const totalDiario = ['1', '2', '3', '4', '5'].reduce((s, c) => s + ((p.porCanalDiario && p.porCanalDiario[c]) || 0), 0);
-  cards.push(`<div class="card"><div class="label">Total diario (todos los canales)</div><div class="value green">${fmtMoney(totalDiario)}</div><div class="note">puede tener doble conteo si hay canales mezclados</div></div>`);
+  cards.push(`<div class="card"><div class="label">Total diario (solo activos)</div><div class="value green">${fmtMoney(totalDiario)}</div><div class="note">excluye pausados; puede tener doble conteo si hay canales mezclados</div></div>`);
   document.getElementById('presupuestoCards').innerHTML = cards.join('');
 
   const filas = p.filas || [];
@@ -852,8 +852,9 @@ function renderPresupuesto() {
       <td>${f.tipo || '—'}</td>
       <td class="num">${f.presupuesto ? fmtMoney(f.presupuesto) : '—'}</td>
       <td>${f.periodo || '—'}</td>
+      <td>${f.activo ? '<span class="pill on">✅ Sí</span>' : '<span class="pill off">⏸ Pausado</span>'}</td>
       <td>${f.mezclado ? '<span class="pill warn">⚠️ Sí</span>' : '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="7" class="empty">Aún no hay datos de presupuesto. Corre sincronizarPresupuesto() en SyncPresupuesto.gs</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="8" class="empty">Aún no hay datos de presupuesto. Corre sincronizarPresupuesto() en SyncPresupuesto.gs</td></tr>`;
 }
 
 /* ---------- eventos ---------- */
