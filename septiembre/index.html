@@ -156,6 +156,7 @@
     <button data-view="vendedor">Por vendedor</button>
     <button data-view="anuncios">Anuncios</button>
     <button data-view="top5">Top 5</button>
+    <button data-view="presupuesto">Presupuesto</button>
   </nav>
 
   <!-- ================= DASHBOARD ================= -->
@@ -340,6 +341,30 @@
     </div>
   </section>
 
+  <!-- ================= PRESUPUESTO ================= -->
+  <section id="view-presupuesto" class="view">
+    <div class="panel">
+      <h3>Presupuesto diario por canal</h3>
+      <p class="sub">Lo que Meta tiene programado gastar por día en cada canal (VENTAS1-5 / V1-V5) — no es lo ya gastado, es lo presupuestado</p>
+      <div class="cards" id="presupuestoCards" style="margin-bottom:0;"></div>
+      <p class="sub" id="presupuestoSyncTxt" style="margin:12px 0 0;"></p>
+    </div>
+
+    <div class="panel">
+      <h3>Detalle por campaña / conjunto</h3>
+      <p class="sub">"Canales mezclados" = ese presupuesto se contó para más de un canal, porque el conjunto tiene anuncios de varios canales a la vez</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Campaña</th><th>Conjunto de anuncios</th><th>Canal(es)</th>
+            <th>Tipo</th><th class="num">Presupuesto</th><th>Período</th><th>Mezclado</th>
+          </tr></thead>
+          <tbody id="tblPresupuesto"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script>
@@ -405,6 +430,7 @@ function render() {
   safe(renderVendedorView, 'vendedorView');
   safe(renderAnunciosView, 'anunciosView');
   safe(renderTop5, 'top5');
+  safe(renderPresupuesto, 'presupuesto');
 
   // Las partes del Dashboard que dependen del rango de fecha (ventas,
   // vendedor del período, gráficos, tabla) se inicializan/actualizan aquí:
@@ -802,6 +828,32 @@ function renderTop5() {
       <td class="num">${fmtMoney(a.ingresos)}</td>
       <td>${renderVerLink(a)}</td>
     </tr>`).join('') || `<tr><td colspan="8" class="empty">No hay anuncios con gasto y ventas registradas aún</td></tr>`;
+}
+
+/* ---------- PRESUPUESTO ---------- */
+function renderPresupuesto() {
+  const p = DATA.presupuesto || { filas: [], porCanalDiario: {}, ultimaActualizacion: null };
+  document.getElementById('presupuestoSyncTxt').textContent = p.ultimaActualizacion || '';
+
+  const cards = ['1', '2', '3', '4', '5'].map(c => {
+    const monto = p.porCanalDiario ? (p.porCanalDiario[c] || 0) : 0;
+    return `<div class="card"><div class="label">Canal V${c}</div><div class="value">${fmtMoney(monto)}</div><div class="note">por día</div></div>`;
+  });
+  const totalDiario = ['1', '2', '3', '4', '5'].reduce((s, c) => s + ((p.porCanalDiario && p.porCanalDiario[c]) || 0), 0);
+  cards.push(`<div class="card"><div class="label">Total diario (todos los canales)</div><div class="value green">${fmtMoney(totalDiario)}</div><div class="note">puede tener doble conteo si hay canales mezclados</div></div>`);
+  document.getElementById('presupuestoCards').innerHTML = cards.join('');
+
+  const filas = p.filas || [];
+  document.getElementById('tblPresupuesto').innerHTML = filas.map(f => `
+    <tr>
+      <td>${f.campana || '—'}</td>
+      <td>${f.conjunto || '—'}</td>
+      <td>${f.canales || '—'}</td>
+      <td>${f.tipo || '—'}</td>
+      <td class="num">${f.presupuesto ? fmtMoney(f.presupuesto) : '—'}</td>
+      <td>${f.periodo || '—'}</td>
+      <td>${f.mezclado ? '<span class="pill warn">⚠️ Sí</span>' : '—'}</td>
+    </tr>`).join('') || `<tr><td colspan="7" class="empty">Aún no hay datos de presupuesto. Corre sincronizarPresupuesto() en SyncPresupuesto.gs</td></tr>`;
 }
 
 /* ---------- eventos ---------- */
