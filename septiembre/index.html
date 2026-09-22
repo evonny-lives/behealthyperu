@@ -344,14 +344,26 @@
   <!-- ================= PRESUPUESTO ================= -->
   <section id="view-presupuesto" class="view">
     <div class="panel">
-      <h3>Presupuesto diario por canal</h3>
-      <p class="sub">Lo que Meta tiene programado gastar por día en cada canal (VENTAS1-5 / V1-V5) — no es lo ya gastado, es lo presupuestado</p>
+      <h3>Presupuesto diario activo por canal</h3>
+      <p class="sub">Solo lo que está prendido ahora mismo — lo que Meta gastaría hoy si nada cambia</p>
       <div class="cards" id="presupuestoCards" style="margin-bottom:0;"></div>
       <p class="sub" id="presupuestoSyncTxt" style="margin:12px 0 0;"></p>
     </div>
 
     <div class="panel">
-      <h3>Detalle por campaña / conjunto</h3>
+      <h3>Total destinado por canal (todo el período)</h3>
+      <p class="sub">Incluye campañas pausadas — para saber cuánto se le destinó a cada canal en total, se haya apagado o no después</p>
+      <div class="cards" id="presupuestoCardsTodos" style="margin-bottom:0;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="head-row" style="margin-bottom:14px;">
+        <h3 style="margin:0;">Detalle por campaña / conjunto</h3>
+        <select id="filtroActivoPresupuesto">
+          <option value="activos">Solo activos</option>
+          <option value="todos">Todos (incluye pausados)</option>
+        </select>
+      </div>
       <p class="sub">"Canales mezclados" = ese presupuesto se contó para más de un canal, porque el conjunto tiene anuncios de varios canales a la vez</p>
       <div class="table-scroll">
         <table>
@@ -832,7 +844,7 @@ function renderTop5() {
 
 /* ---------- PRESUPUESTO ---------- */
 function renderPresupuesto() {
-  const p = DATA.presupuesto || { filas: [], porCanalDiario: {}, ultimaActualizacion: null };
+  const p = DATA.presupuesto || { filas: [], porCanalDiario: {}, porCanalDiarioTodos: {}, ultimaActualizacion: null };
   document.getElementById('presupuestoSyncTxt').textContent = p.ultimaActualizacion || '';
 
   const cards = ['1', '2', '3', '4', '5'].map(c => {
@@ -840,10 +852,25 @@ function renderPresupuesto() {
     return `<div class="card"><div class="label">Canal V${c}</div><div class="value">${fmtMoney(monto)}</div><div class="note">por día</div></div>`;
   });
   const totalDiario = ['1', '2', '3', '4', '5'].reduce((s, c) => s + ((p.porCanalDiario && p.porCanalDiario[c]) || 0), 0);
-  cards.push(`<div class="card"><div class="label">Total diario (solo activos)</div><div class="value green">${fmtMoney(totalDiario)}</div><div class="note">excluye pausados; puede tener doble conteo si hay canales mezclados</div></div>`);
+  cards.push(`<div class="card"><div class="label">Total diario (solo activos)</div><div class="value green">${fmtMoney(totalDiario)}</div><div class="note">puede tener doble conteo si hay canales mezclados</div></div>`);
   document.getElementById('presupuestoCards').innerHTML = cards.join('');
 
-  const filas = p.filas || [];
+  const cardsTodos = ['1', '2', '3', '4', '5'].map(c => {
+    const monto = p.porCanalDiarioTodos ? (p.porCanalDiarioTodos[c] || 0) : 0;
+    return `<div class="card"><div class="label">Canal V${c}</div><div class="value">${fmtMoney(monto)}</div><div class="note">incluye pausados</div></div>`;
+  });
+  const totalTodos = ['1', '2', '3', '4', '5'].reduce((s, c) => s + ((p.porCanalDiarioTodos && p.porCanalDiarioTodos[c]) || 0), 0);
+  cardsTodos.push(`<div class="card"><div class="label">Total (todo el período)</div><div class="value green">${fmtMoney(totalTodos)}</div><div class="note">activos + pausados</div></div>`);
+  document.getElementById('presupuestoCardsTodos').innerHTML = cardsTodos.join('');
+
+  renderTablaPresupuesto();
+}
+
+function renderTablaPresupuesto() {
+  const p = DATA.presupuesto || { filas: [] };
+  const soloActivos = document.getElementById('filtroActivoPresupuesto').value === 'activos';
+  const filas = (p.filas || []).filter(f => !soloActivos || f.activo);
+
   document.getElementById('tblPresupuesto').innerHTML = filas.map(f => `
     <tr>
       <td>${f.campana || '—'}</td>
@@ -854,7 +881,7 @@ function renderPresupuesto() {
       <td>${f.periodo || '—'}</td>
       <td>${f.activo ? '<span class="pill on">✅ Sí</span>' : '<span class="pill off">⏸ Pausado</span>'}</td>
       <td>${f.mezclado ? '<span class="pill warn">⚠️ Sí</span>' : '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="8" class="empty">Aún no hay datos de presupuesto. Corre sincronizarPresupuesto() en SyncPresupuesto.gs</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="8" class="empty">Sin resultados para este filtro</td></tr>`;
 }
 
 /* ---------- eventos ---------- */
@@ -870,6 +897,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn => {
 ['filtroVendedor', 'filtroProducto'].forEach(id => document.getElementById(id).addEventListener('change', renderVendedorView));
 document.querySelectorAll('.filtroEstadoChk').forEach(chk => chk.addEventListener('change', renderAnunciosView));
 ['filtroVendedorAd', 'filtroCanalAd'].forEach(id => document.getElementById(id).addEventListener('change', renderAnunciosView));
+document.getElementById('filtroActivoPresupuesto').addEventListener('change', renderTablaPresupuesto);
 
 document.getElementById('btnRefresh').addEventListener('click', loadData);
 
