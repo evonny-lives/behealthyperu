@@ -351,8 +351,8 @@
     </div>
 
     <div class="panel">
-      <h3>Total destinado por canal (todo el período)</h3>
-      <p class="sub">Incluye campañas pausadas — para saber cuánto se le destinó a cada canal en total, se haya apagado o no después</p>
+      <h3>Gasto real acumulado por canal (todo el período)</h3>
+      <p class="sub">Esto sí es un acumulado real — lo que cada canal ha gastado de verdad hasta ahora, día tras día (no presupuesto configurado)</p>
       <div class="cards" id="presupuestoCardsTodos" style="margin-bottom:0;"></div>
     </div>
 
@@ -856,11 +856,11 @@ function renderPresupuesto() {
   document.getElementById('presupuestoCards').innerHTML = cards.join('');
 
   const cardsTodos = ['1', '2', '3', '4', '5'].map(c => {
-    const monto = p.porCanalDiarioTodos ? (p.porCanalDiarioTodos[c] || 0) : 0;
-    return `<div class="card"><div class="label">Canal V${c}</div><div class="value">${fmtMoney(monto)}</div><div class="note">incluye pausados</div></div>`;
+    const monto = (p.gastoAcumuladoPorCanal && p.gastoAcumuladoPorCanal.porCanal) ? (p.gastoAcumuladoPorCanal.porCanal[c] || 0) : 0;
+    return `<div class="card"><div class="label">Canal V${c}</div><div class="value">${fmtMoney(monto)}</div><div class="note">gastado en el período</div></div>`;
   });
-  const totalTodos = ['1', '2', '3', '4', '5'].reduce((s, c) => s + ((p.porCanalDiarioTodos && p.porCanalDiarioTodos[c]) || 0), 0);
-  cardsTodos.push(`<div class="card"><div class="label">Total (todo el período)</div><div class="value green">${fmtMoney(totalTodos)}</div><div class="note">activos + pausados</div></div>`);
+  const totalTodos = ['1', '2', '3', '4', '5'].reduce((s, c) => s + ((p.gastoAcumuladoPorCanal && p.gastoAcumuladoPorCanal.porCanal && p.gastoAcumuladoPorCanal.porCanal[c]) || 0), 0);
+  cardsTodos.push(`<div class="card"><div class="label">Total gastado (todo el período)</div><div class="value green">${fmtMoney(totalTodos)}</div><div class="note">suma real, coincide con Meta Ads — en vivo</div></div>`);
   document.getElementById('presupuestoCardsTodos').innerHTML = cardsTodos.join('');
 
   renderTablaPresupuesto();
