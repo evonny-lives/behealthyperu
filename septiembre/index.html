@@ -225,6 +225,21 @@
     </div>
 
     <div class="panel">
+      <h3>Rendimiento por canal de ventas</h3>
+      <p class="sub">ROAS y % de cierre de cada canal (V1-V5) — período completo sincronizado, no se ajusta con el filtro de fecha de arriba todavía</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Canal</th><th class="num">Ventas</th><th class="num">Ingresos</th>
+            <th class="num">Gasto</th><th class="num">ROAS</th>
+            <th class="num">Mensajes</th><th class="num">% de Cierre</th>
+          </tr></thead>
+          <tbody id="tblPorCanal"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
       <h3>Detalle por vendedor</h3>
       <div class="table-scroll">
         <table>
@@ -443,6 +458,7 @@ function render() {
   safe(renderAnunciosView, 'anunciosView');
   safe(renderTop5, 'top5');
   safe(renderPresupuesto, 'presupuesto');
+  safe(renderPorCanal, 'porCanal');
 
   // Las partes del Dashboard que dependen del rango de fecha (ventas,
   // vendedor del período, gráficos, tabla) se inicializan/actualizan aquí:
@@ -840,6 +856,21 @@ function renderTop5() {
       <td class="num">${fmtMoney(a.ingresos)}</td>
       <td>${renderVerLink(a)}</td>
     </tr>`).join('') || `<tr><td colspan="8" class="empty">No hay anuncios con gasto y ventas registradas aún</td></tr>`;
+}
+
+/* ---------- RENDIMIENTO POR CANAL ---------- */
+function renderPorCanal() {
+  const filas = DATA.porCanal || [];
+  document.getElementById('tblPorCanal').innerHTML = filas.map(c => `
+    <tr>
+      <td><b>${c.canal}</b></td>
+      <td class="num">${fmtNum(c.ventas)}</td>
+      <td class="num">${fmtMoney(c.ingresos)}</td>
+      <td class="num">${fmtMoney(c.gasto)}</td>
+      <td class="num">${c.roas != null ? c.roas + 'x' : '—'}</td>
+      <td class="num">${fmtNum(c.mensajes)}</td>
+      <td class="num">${c.porcentajeCierre != null ? c.porcentajeCierre + '%' : '—'}</td>
+    </tr>`).join('') || `<tr><td colspan="7" class="empty">Sin datos aún</td></tr>`;
 }
 
 /* ---------- PRESUPUESTO ---------- */
