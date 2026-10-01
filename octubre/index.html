@@ -171,6 +171,7 @@
     <button data-view="anuncios">Anuncios</button>
     <button data-view="top5">Top 5</button>
     <button data-view="presupuesto">Presupuesto</button>
+    <button data-view="anual">Resumen Anual</button>
   </nav>
 
   <!-- ================= DASHBOARD ================= -->
@@ -406,6 +407,35 @@
     </div>
   </section>
 
+  <!-- ================= RESUMEN ANUAL ================= -->
+  <section id="view-anual" class="view">
+    <div class="panel">
+      <h3>Resultados mes a mes</h3>
+      <p class="sub">Se va acumulando cada vez que se archiva un mes cerrado (pestaña "Resumen Anual" del Sheets) — incluye los meses anteriores, no solo el actual</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Mes</th><th class="num">Inversión</th><th class="num">Facturación</th>
+            <th class="num">ROAS</th><th class="num">% de Conversión</th>
+            <th class="num">Mensajes</th><th>Vendedor del mes</th>
+          </tr></thead>
+          <tbody id="tblResumenAnual"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Facturación por mes (S/)</h3>
+        <div class="chart-box"><canvas id="chartAnualFacturacion"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>ROAS por mes</h3>
+        <div class="chart-box"><canvas id="chartAnualRoas"></canvas></div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script>
@@ -473,6 +503,7 @@ function render() {
   safe(renderTop5, 'top5');
   safe(renderPresupuesto, 'presupuesto');
   safe(renderPorCanal, 'porCanal');
+  safe(renderResumenAnual, 'resumenAnual');
 
   // Las partes del Dashboard que dependen del rango de fecha (ventas,
   // vendedor del período, gráficos, tabla) se inicializan/actualizan aquí:
@@ -885,6 +916,36 @@ function renderPorCanal() {
       <td class="num">${fmtNum(c.mensajes)}</td>
       <td class="num">${c.porcentajeCierre != null ? c.porcentajeCierre + '%' : '—'}</td>
     </tr>`).join('') || `<tr><td colspan="7" class="empty">Sin datos aún</td></tr>`;
+}
+
+/* ---------- RESUMEN ANUAL (histórico mes a mes) ---------- */
+function renderResumenAnual() {
+  const filas = DATA.resumenAnual || [];
+
+  document.getElementById('tblResumenAnual').innerHTML = filas.map(m => `
+    <tr>
+      <td><b>${m.mes}</b></td>
+      <td class="num">${fmtMoney(m.inversion)}</td>
+      <td class="num">${fmtMoney(m.facturado)}</td>
+      <td class="num">${m.roas != null ? m.roas + 'x' : '—'}</td>
+      <td class="num">${m.porcentajeCierre != null ? m.porcentajeCierre + '%' : '—'}</td>
+      <td class="num">${fmtNum(m.mensajes || 0)}</td>
+      <td>${m.vendedorDelMes || '—'}</td>
+    </tr>`).join('') || `<tr><td colspan="7" class="empty">Aún no se ha archivado ningún mes</td></tr>`;
+
+  destroyChart('anualFacturacion');
+  charts.anualFacturacion = new Chart(document.getElementById('chartAnualFacturacion'), {
+    type: 'bar',
+    data: { labels: filas.map(m => m.mes), datasets: [{ label: 'Facturación (S/)', data: filas.map(m => m.facturado), backgroundColor: '#8a4a20', borderRadius: 6 }] },
+    options: baseChartOptions('x')
+  });
+
+  destroyChart('anualRoas');
+  charts.anualRoas = new Chart(document.getElementById('chartAnualRoas'), {
+    type: 'line',
+    data: { labels: filas.map(m => m.mes), datasets: [{ label: 'ROAS', data: filas.map(m => m.roas), borderColor: '#5f7a3f', backgroundColor: '#5f7a3f', tension: 0.25, fill: false }] },
+    options: baseChartOptions('x')
+  });
 }
 
 /* ---------- PRESUPUESTO ---------- */
