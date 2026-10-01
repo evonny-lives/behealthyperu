@@ -417,7 +417,7 @@
           <thead><tr>
             <th>Mes</th><th class="num">Inversión</th><th class="num">Facturación</th>
             <th class="num">ROAS</th><th class="num">% de Conversión</th>
-            <th class="num">Mensajes</th><th>Vendedor del mes</th>
+            <th class="num">Mensajes</th><th class="num">Costo/mensaje</th><th>Vendedor del mes</th>
           </tr></thead>
           <tbody id="tblResumenAnual"></tbody>
         </table>
@@ -930,8 +930,9 @@ function renderResumenAnual() {
       <td class="num">${m.roas != null ? m.roas + 'x' : '—'}</td>
       <td class="num">${m.porcentajeCierre != null ? m.porcentajeCierre + '%' : '—'}</td>
       <td class="num">${fmtNum(m.mensajes || 0)}</td>
+      <td class="num">${m.costoPorMensaje != null ? fmtMoney(m.costoPorMensaje) : '—'}</td>
       <td>${m.vendedorDelMes || '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="7" class="empty">Aún no se ha archivado ningún mes</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="8" class="empty">Aún no se ha archivado ningún mes</td></tr>`;
 
   destroyChart('anualFacturacion');
   charts.anualFacturacion = new Chart(document.getElementById('chartAnualFacturacion'), {
