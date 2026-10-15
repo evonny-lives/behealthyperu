@@ -328,10 +328,10 @@
       <div class="table-scroll tabla-alta">
         <table>
       <thead><tr>
-        <th class="sticky-col">Código anuncio</th><th>Producto</th><th>Formato</th><th>Vendedor</th>
+        <th class="sticky-col">Código anuncio</th><th>CP</th><th>Formato</th><th>Vendedor</th>
         <th class="num">Ventas</th><th class="num">Ingresos</th><th class="num">Gasto</th>
         <th class="num">ROAS</th><th class="num">Costo/compra</th><th class="num">Mensajes</th>
-        <th class="num">Costo/mensaje</th><th class="num">Ticket</th><th>Última venta</th>
+        <th class="num">% Cierre</th><th class="num">Costo/mensaje</th><th class="num">Ticket</th><th>Última venta</th>
         <th>Estado</th><th>Ver</th>
       </tr></thead>
       <tbody id="tblAnuncios"></tbody>
@@ -851,7 +851,7 @@ function renderAnunciosView() {
   document.getElementById('tblAnuncios').innerHTML = rows.map(a => `
     <tr>
       <td class="sticky-col">${a.codigo}${a.fuenteGasto === 'meta' ? ' <span class="pill on" style="margin-left:4px;">Meta</span>' : (a.fuenteGasto === 'manual' ? ' <span class="pill off" style="margin-left:4px;">Manual</span>' : '')}</td>
-      <td>${a.producto || '—'}</td>
+      <td>${a.cuenta || '—'}</td>
       <td>${a.formato || '—'}</td>
       <td>${(a.vendedores || []).join(', ') || '—'}</td>
       <td class="num">${fmtNum(a.ventas)}</td>
@@ -860,12 +860,13 @@ function renderAnunciosView() {
       <td class="num">${a.roas != null ? a.roas + 'x' : '—'}</td>
       <td class="num">${a.costoPorCompra != null ? fmtMoney(a.costoPorCompra) : '—'}</td>
       <td class="num">${a.mensajes ? fmtNum(a.mensajes) : '—'}</td>
+      <td class="num">${a.porcentajeCierre != null ? a.porcentajeCierre + '%' : '—'}</td>
       <td class="num">${a.costoPorMensaje != null ? fmtMoney(a.costoPorMensaje) : '—'}</td>
       <td class="num">${fmtMoney(a.ticketPromedio)}</td>
       <td>${a.ultimaVenta || '—'}</td>
       <td>${estadoPill(a.estado)}</td>
       <td>${a.link ? `<a class="ver" href="${a.link}" target="_blank" rel="noopener">Ver ↗</a>` : '—'}</td>
-    </tr>`).join('') || `<tr><td colspan="15" class="empty">No hay anuncios para este filtro</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="16" class="empty">No hay anuncios para este filtro</td></tr>`;
 }
 
 /* ---------- TOP 5 (global, con ROAS) ---------- */
