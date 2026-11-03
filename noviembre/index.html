@@ -435,11 +435,13 @@
 
     <div class="grid-2">
       <div class="panel">
-        <h3>Facturación por mes (S/)</h3>
+        <h3>Facturación vs Inversión por mes (S/)</h3>
+        <p class="sub">Cuánto se facturó frente a cuánto se invirtió en anuncios cada mes. Pasa el mouse para ver el ROAS.</p>
         <div class="chart-box"><canvas id="chartAnualFacturacion"></canvas></div>
       </div>
       <div class="panel">
-        <h3>ROAS por mes</h3>
+        <h3>% de cierre vs ROAS por mes</h3>
+        <p class="sub">Barras: % de cierre (ventas ÷ mensajes), eje izquierdo. Línea: ROAS, eje derecho. Ayuda a ver cuánto mejora el retorno cuando cierras más.</p>
         <div class="chart-box"><canvas id="chartAnualRoas"></canvas></div>
       </div>
     </div>
@@ -994,18 +996,55 @@ function renderResumenAnual() {
       <td>${m.vendedorDelMes || '—'}</td>
     </tr>`).join('') || `<tr><td colspan="8" class="empty">Aún no se ha archivado ningún mes</td></tr>`;
 
+  const num = v => (v === '' || v == null || isNaN(Number(v))) ? null : Number(v);
+  const colorTexto = '#7c6f5c', colorGrid = '#eee6d8';
+
+  // Izquierda: facturación vs inversión (barras agrupadas)
   destroyChart('anualFacturacion');
   charts.anualFacturacion = new Chart(document.getElementById('chartAnualFacturacion'), {
     type: 'bar',
-    data: { labels: filas.map(m => m.mes), datasets: [{ label: 'Facturación (S/)', data: filas.map(m => m.facturado), backgroundColor: '#8a4a20', borderRadius: 6 }] },
-    options: baseChartOptions('x')
+    data: { labels: filas.map(m => m.mes), datasets: [
+      { label: 'Facturación (S/)', data: filas.map(m => num(m.facturado)), backgroundColor: '#8a4a20', borderRadius: 6 },
+      { label: 'Inversión (S/)', data: filas.map(m => num(m.inversion)), backgroundColor: '#d9b58a', borderRadius: 6 }
+    ] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: colorTexto } },
+        tooltip: { callbacks: {
+          label: c => c.dataset.label + ': ' + fmtMoney(c.parsed.y),
+          afterBody: items => {
+            const m = filas[items[0].dataIndex] || {};
+            return m.roas != null && m.roas !== '' ? 'ROAS: ' + m.roas + 'x' : '';
+          }
+        } }
+      },
+      scales: {
+        x: { ticks: { color: colorTexto }, grid: { color: colorGrid } },
+        y: { beginAtZero: true, ticks: { color: colorTexto }, grid: { color: colorGrid } }
+      }
+    }
   });
 
+  // Derecha: % de cierre (barras, eje izq.) vs ROAS (línea, eje der.)
   destroyChart('anualRoas');
   charts.anualRoas = new Chart(document.getElementById('chartAnualRoas'), {
-    type: 'line',
-    data: { labels: filas.map(m => m.mes), datasets: [{ label: 'ROAS', data: filas.map(m => m.roas), borderColor: '#5f7a3f', backgroundColor: '#5f7a3f', tension: 0.25, fill: false }] },
-    options: baseChartOptions('x')
+    data: { labels: filas.map(m => m.mes), datasets: [
+      { type: 'bar', label: '% de cierre', data: filas.map(m => num(m.porcentajeCierre)), backgroundColor: '#7a9a54', borderRadius: 6, yAxisID: 'y' },
+      { type: 'line', label: 'ROAS (x)', data: filas.map(m => num(m.roas)), borderColor: '#8a4a20', backgroundColor: '#8a4a20', tension: 0.25, fill: false, pointRadius: 4, yAxisID: 'y2' }
+    ] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: colorTexto } },
+        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + (c.dataset.yAxisID === 'y2' ? c.parsed.y + 'x' : c.parsed.y + '%') } }
+      },
+      scales: {
+        x: { ticks: { color: colorTexto }, grid: { color: colorGrid } },
+        y: { beginAtZero: true, position: 'left', title: { display: true, text: '% de cierre', color: colorTexto }, ticks: { color: colorTexto, callback: v => v + '%' }, grid: { color: colorGrid } },
+        y2: { position: 'right', title: { display: true, text: 'ROAS', color: colorTexto }, ticks: { color: colorTexto, callback: v => v + 'x' }, grid: { drawOnChartArea: false } }
+      }
+    }
   });
 }
 
