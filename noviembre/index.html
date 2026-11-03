@@ -441,7 +441,7 @@
       </div>
       <div class="panel">
         <h3>% de cierre vs ROAS por mes</h3>
-        <p class="sub">Barras: % de cierre (ventas ÷ mensajes), eje izquierdo. Línea: ROAS, eje derecho. Ayuda a ver cuánto mejora el retorno cuando cierras más.</p>
+        <p class="sub">Línea verde: % de cierre (ventas ÷ mensajes), eje izquierdo. Línea marrón: ROAS, eje derecho. Ayuda a ver cuánto mejora el retorno cuando cierras más.</p>
         <div class="chart-box"><canvas id="chartAnualRoas"></canvas></div>
       </div>
     </div>
@@ -1030,7 +1030,7 @@ function renderResumenAnual() {
   destroyChart('anualRoas');
   charts.anualRoas = new Chart(document.getElementById('chartAnualRoas'), {
     data: { labels: filas.map(m => m.mes), datasets: [
-      { type: 'bar', label: '% de cierre', data: filas.map(m => num(m.porcentajeCierre)), backgroundColor: '#7a9a54', borderRadius: 6, yAxisID: 'y' },
+      { type: 'line', label: '% de cierre', data: filas.map(m => num(m.porcentajeCierre)), borderColor: '#7a9a54', backgroundColor: '#7a9a54', tension: 0.25, fill: false, pointRadius: 4, yAxisID: 'y' },
       { type: 'line', label: 'ROAS (x)', data: filas.map(m => num(m.roas)), borderColor: '#8a4a20', backgroundColor: '#8a4a20', tension: 0.25, fill: false, pointRadius: 4, yAxisID: 'y2' }
     ] },
     options: {
@@ -1039,10 +1039,11 @@ function renderResumenAnual() {
         legend: { display: true, labels: { color: colorTexto } },
         tooltip: { callbacks: { label: c => c.dataset.label + ': ' + (c.dataset.yAxisID === 'y2' ? c.parsed.y + 'x' : c.parsed.y + '%') } }
       },
+      layout: { padding: { right: 8 } },
       scales: {
         x: { ticks: { color: colorTexto }, grid: { color: colorGrid } },
-        y: { beginAtZero: true, position: 'left', title: { display: true, text: '% de cierre', color: colorTexto }, ticks: { color: colorTexto, callback: v => v + '%' }, grid: { color: colorGrid } },
-        y2: { position: 'right', title: { display: true, text: 'ROAS', color: colorTexto }, ticks: { color: colorTexto, callback: v => v + 'x' }, grid: { drawOnChartArea: false } }
+        y: { position: 'left', title: { display: true, text: '% de cierre', color: colorTexto }, ticks: { color: colorTexto, callback: v => (Math.round(v * 100) / 100) + '%' }, grid: { color: colorGrid } },
+        y2: { position: 'right', title: { display: true, text: 'ROAS', color: colorTexto }, ticks: { color: colorTexto, callback: v => (Math.round(v * 100) / 100) + 'x' }, grid: { drawOnChartArea: false } }
       }
     }
   });
